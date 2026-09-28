@@ -15,6 +15,8 @@ interface MobileBottomNavProps {
   setActiveTab: (tab: TabType) => void;
   userRole: UserRole;
   registeredCount: number;
+  adminSubTab?: 'registrations' | 'bills' | 'surveys';
+  onSelectAdminSubTab?: (subTab: 'registrations' | 'bills' | 'surveys') => void;
 }
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
@@ -22,8 +24,19 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   setActiveTab,
   userRole,
   registeredCount,
+  adminSubTab = 'registrations',
+  onSelectAdminSubTab,
 }) => {
-  const customerTabs: { id: TabType; label: string; icon: any; isCenter?: boolean; isLive?: boolean }[] = [
+  interface TabItem {
+    id: TabType;
+    subTab?: 'registrations' | 'bills' | 'surveys';
+    label: string;
+    icon: any;
+    isCenter?: boolean;
+    isLive?: boolean;
+  }
+
+  const customerTabs: TabItem[] = [
     {
       id: 'registration',
       label: 'Daftar SR',
@@ -53,33 +66,25 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     },
   ];
 
-  const adminTabs: { id: TabType; label: string; icon: any; isCenter?: boolean; isLive?: boolean }[] = [
+  const adminTabs: TabItem[] = [
     {
       id: 'admin',
-      label: 'Pelanggan',
+      subTab: 'registrations',
+      label: 'Registrasi',
       icon: Users,
     },
     {
-      id: 'registration',
-      label: 'Formulir',
-      icon: FileText,
-    },
-    {
-      id: 'billing',
+      id: 'admin',
+      subTab: 'bills',
       label: 'Tagihan',
       icon: CreditCard,
       isCenter: true,
     },
     {
-      id: 'tracking',
-      label: 'Tracking',
-      icon: Navigation,
-      isLive: true,
-    },
-    {
-      id: 'faq',
-      label: 'FAQ',
-      icon: HelpCircle,
+      id: 'admin',
+      subTab: 'surveys',
+      label: 'Survey',
+      icon: MessageSquareHeart,
     },
   ];
 
@@ -93,14 +98,24 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       <div className="flex items-center justify-around max-w-md mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive =
+            userRole === 'admin' && tab.subTab
+              ? activeTab === 'admin' && adminSubTab === tab.subTab
+              : activeTab === tab.id;
+
+          const handleTabClick = () => {
+            setActiveTab(tab.id);
+            if (tab.subTab && onSelectAdminSubTab) {
+              onSelectAdminSubTab(tab.subTab);
+            }
+          };
 
           if (tab.isCenter) {
             return (
               <button
-                key={tab.id}
+                key={`${tab.id}-${tab.subTab || 'center'}`}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={handleTabClick}
                 className="relative -top-3 flex flex-col items-center group cursor-pointer focus:outline-hidden"
               >
                 <div
@@ -125,9 +140,9 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
           return (
             <button
-              key={tab.id}
+              key={`${tab.id}-${tab.subTab || 'tab'}`}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={handleTabClick}
               className={`flex-1 py-1.5 flex flex-col items-center justify-center relative transition-all duration-150 cursor-pointer focus:outline-hidden active:scale-95 ${
                 isActive ? 'text-[#005DAA]' : 'text-slate-500 hover:text-slate-800'
               }`}

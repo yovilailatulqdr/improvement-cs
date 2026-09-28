@@ -119,33 +119,11 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Supabase connection runs silently in the background per user preference */}
 
-          {/* Role Status (Admin can switch between views; Customer is locked to customer portal) */}
+          {/* Role Status Badge */}
           {currentUser?.role === 'admin' ? (
-            <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => onSwitchRole('customer')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                  userRole === 'customer'
-                    ? 'bg-white text-[#005DAA] shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <User className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Portal</span> Pelanggan
-              </button>
-              <button
-                type="button"
-                onClick={() => onSwitchRole('admin')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                  userRole === 'admin'
-                    ? 'bg-[#005DAA] text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Portal</span> Admin
-              </button>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-linear-to-r from-[#005DAA] to-[#003868] text-white text-xs font-bold shadow-2xs border border-blue-900/30">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+              <span>Portal Admin Backoffice</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-[#005DAA] text-xs font-bold shadow-2xs">

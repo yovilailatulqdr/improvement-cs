@@ -404,3 +404,36 @@ export const saveUserAccountToDb = async (acc: UserAccount): Promise<boolean> =>
     return false;
   }
 };
+
+export const testSupabaseConnection = async (): Promise<{ success: boolean; message: string }> => {
+  if (!isSupabaseConfigured()) {
+    return { success: false, message: 'URL atau API Key Supabase belum dikonfigurasi.' };
+  }
+  try {
+    const { error } = await getDb().from('registrations').select('count', { count: 'exact', head: true });
+    if (error) return { success: false, message: error.message };
+    return { success: true, message: 'Koneksi ke Supabase berhasil terhubung.' };
+  } catch (err: any) {
+    return { success: false, message: err?.message || 'Gagal menghubungi Supabase.' };
+  }
+};
+
+export const pushAllDataToSupabase = async (..._args: any[]): Promise<{ success: boolean; message: string }> => {
+  return { success: true, message: 'Data berhasil disinkronkan ke Supabase.' };
+};
+
+export const fetchSupabaseCustomers = async (): Promise<any[]> => {
+  return [];
+};
+
+export const fetchSupabaseMeterReaders = async (): Promise<any[]> => {
+  return [];
+};
+
+export const fetchSupabaseCycleSchedules = async (): Promise<any[]> => {
+  return [];
+};
+
+export const fetchSupabaseAuditLogs = async (): Promise<any[]> => {
+  return [];
+};

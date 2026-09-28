@@ -1,5 +1,46 @@
 export type TabType = 'registration' | 'tracking' | 'billing' | 'survey' | 'faq' | 'admin';
 export type UserRole = 'customer' | 'admin';
+export interface UserProfile {
+  role: string;
+  name: string;
+  title?: string;
+  avatar?: string;
+  division?: string;
+}
+export type CustomerClass = string;
+export type WorkflowStatus = string;
+export type ReaderCategory = string;
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  action: string;
+  user: string;
+  details?: any;
+  [key: string]: any;
+}
+
+export interface IndustryCustomer {
+  id: string;
+  nomorPelanggan: string;
+  namaPelanggan: string;
+  alamat?: string;
+  customerClass?: string;
+  fotoMeterUrl?: string;
+  [key: string]: any;
+}
+
+export interface MeterReader {
+  id: string;
+  nama: string;
+  [key: string]: any;
+}
+
+export interface CycleSchedule {
+  id: string;
+  siklus: string;
+  [key: string]: any;
+}
 
 export interface UserAccount {
   id: string;
@@ -169,6 +210,7 @@ export interface RegistrationFormData {
   fotoPropertiFiles?: PropertyPhoto[];
   // Pembayaran
   skemaPembayaran: string;
+  metodePembayaran?: string;
   keteranganSkema?: string;
   biayaSambungan: number;
   golonganTarif?: string;

@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { RegistrationFormData, CustomerTrackingRecord, SurveySubmission } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { RegistrationFormData, CustomerTrackingRecord, SurveySubmission, MonthlyBillRecord } from '../types';
 import {
   Users,
   Clock,
@@ -49,6 +49,8 @@ import {
 import { isSupabaseConfigured } from '../lib/supabase';
 import { exportCustomersToExcel, downloadExcelTemplate, exportSurveysToExcel } from '../utils/excelService';
 import { ExcelImportModal } from './ExcelImportModal';
+import { AdminBillManagement } from './AdminBillManagement';
+import { cloudSyncService, INITIAL_BILLS_DATA } from '../services/cloudSyncService';
 
 interface AdminSectionProps {
   registrations: RegistrationFormData[];
@@ -74,12 +76,20 @@ interface AdminSectionProps {
   onNavigateToRegister?: () => void;
   onImportRegistrations?: (newRecords: RegistrationFormData[]) => void;
   onOpenSupabaseModal?: () => void;
+  bills?: MonthlyBillRecord[];
+  onUpdateBills?: (updatedBills: MonthlyBillRecord[]) => void;
+  activeSubTab?: 'registrations' | 'bills' | 'surveys';
+  onChangeSubTab?: (subTab: 'registrations' | 'bills' | 'surveys') => void;
 }
 
 export const AdminSection: React.FC<AdminSectionProps> = ({
   registrations,
   trackingRecords,
   surveys: _surveys,
+  bills: externalBills,
+  onUpdateBills,
+  activeSubTab,
+  onChangeSubTab,
   onUpdateTrackingStep,
   onUpdateTechnicalData,
   onViewReceipt,
@@ -96,10 +106,54 @@ export const AdminSection: React.FC<AdminSectionProps> = ({
   const [isExcelImportModalOpen, setIsExcelImportModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Sub-tab: 'registrations' (Data Registrasi Baru) vs 'surveys' (Data Survey Pelanggan)
-  const [adminSubTab, setAdminSubTab] = useState<'registrations' | 'surveys'>('registrations');
+  // Sub-tab: 'registrations' | 'bills' | 'surveys'
+  const [adminSubTab, setAdminSubTabState] = useState<'registrations' | 'bills' | 'surveys'>(
+    activeSubTab || 'registrations'
+  );
+
+  const setAdminSubTab = (tab: 'registrations' | 'bills' | 'surveys') => {
+    setAdminSubTabState(tab);
+    onChangeSubTab?.(tab);
+  };
+
+  useEffect(() => {
+    if (activeSubTab) {
+      setAdminSubTabState(activeSubTab);
+    }
+  }, [activeSubTab]);
   const [surveySearchTerm, setSurveySearchTerm] = useState('');
   const [surveyFilterCat, setSurveyFilterCat] = useState<'all' | 'Puas' | 'Perlu Perbaikan Air' | 'Keluhan Tekanan' | 'Apresiasi Petugas'>('all');
+
+  // Bills state
+  const [billsState, setBillsState] = useState<MonthlyBillRecord[]>(() => {
+    if (externalBills && externalBills.length > 0) return externalBills;
+    const local = cloudSyncService.getLocalSnapshot().bills;
+    return local.length > 0 ? local : INITIAL_BILLS_DATA;
+  });
+
+  useEffect(() => {
+    if (externalBills && externalBills.length > 0) {
+      setBillsState(externalBills);
+    }
+  }, [externalBills]);
+
+  useEffect(() => {
+    const unsub = cloudSyncService.addListener(() => {
+      const snap = cloudSyncService.getLocalSnapshot().bills;
+      if (snap && snap.length > 0) {
+        setBillsState(snap);
+      }
+    });
+    return unsub;
+  }, []);
+
+  const handleUpdateBills = (newBills: MonthlyBillRecord[]) => {
+    setBillsState(newBills);
+    if (onUpdateBills) {
+      onUpdateBills(newBills);
+    }
+    cloudSyncService.saveBills(newBills);
+  };
 
   const surveyList = _surveys || [];
 
@@ -408,14 +462,10 @@ export const AdminSection: React.FC<AdminSectionProps> = ({
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            type="button"
-            onClick={onSwitchToCustomer}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold shadow-xs transition"
-          >
-            <Users className="w-4 h-4 text-[#005DAA]" />
-            Buka Tampilan Pelanggan
-          </button>
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 backdrop-blur-xs text-blue-100 text-xs font-semibold border border-white/15">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Sistem Terhubung Real-Time</span>
+          </div>
         </div>
       </div>
 
@@ -440,6 +490,28 @@ export const AdminSection: React.FC<AdminSectionProps> = ({
             }`}
           >
             {combinedList.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAdminSubTab('bills')}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+            adminSubTab === 'bills'
+              ? 'bg-[#005DAA] text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+          }`}
+        >
+          <CreditCard className="w-4 h-4 text-amber-300" />
+          <span>Data Tagihan Pelanggan (Manual &amp; Impor Excel)</span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              adminSubTab === 'bills'
+                ? 'bg-white/20 text-white'
+                : 'bg-slate-200 text-slate-700'
+            }`}
+          >
+            {billsState.length}
           </span>
         </button>
 
@@ -914,6 +986,11 @@ export const AdminSection: React.FC<AdminSectionProps> = ({
           </div>
         </div>
       </>
+    ) : adminSubTab === 'bills' ? (
+      <AdminBillManagement
+        bills={billsState}
+        onUpdateBills={handleUpdateBills}
+      />
     ) : (
       <>
         {/* Survey KPI Cards */}

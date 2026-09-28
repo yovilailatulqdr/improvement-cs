@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { TabType, RegistrationFormData, CustomerTrackingRecord, SurveySubmission, UserRole, UserAccount } from './types';
+import { TabType, RegistrationFormData, CustomerTrackingRecord, SurveySubmission, UserRole, UserAccount, MonthlyBillRecord } from './types';
 import { 
   INITIAL_TRACKING_DATABASE, 
   INITIAL_FAQS, 
@@ -19,6 +19,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { SupabaseModal } from './components/SupabaseModal';
 import { MonthlyBillSection } from './components/MonthlyBillSection';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { cloudSyncService, INITIAL_BILLS_DATA } from './services/cloudSyncService';
 import {
   fetchRegistrationsFromDb,
   saveRegistrationToDb,
@@ -122,15 +123,46 @@ export default function App() {
     }
   });
 
+  // Monthly Bills state - persistent and cloud synced
+  const [bills, setBills] = useState<MonthlyBillRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('aetra_customer_bills');
+      return saved ? JSON.parse(saved) : INITIAL_BILLS_DATA;
+    } catch {
+      return INITIAL_BILLS_DATA;
+    }
+  });
+
+  // Admin sub-tab state ('registrations' | 'bills' | 'surveys')
+  const [adminSubTab, setAdminSubTab] = useState<'registrations' | 'bills' | 'surveys'>('registrations');
+
   // Receipt Modal State
   const [receiptData, setReceiptData] = useState<RegistrationFormData | null>(null);
   // Supabase Guide & Database Modal
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
   const [dbVersion, setDbVersion] = useState(0);
 
-  // Initial load from Supabase if configured and online
+  // Initial load from Cloud & Supabase for cross-device persistence anywhere (e.g. Vercel)
   const loadFromSupabase = useCallback(async () => {
     try {
+      // 1. First pull from master cloud store
+      const cloudSnap = await cloudSyncService.pullFromCloud();
+      if (cloudSnap) {
+        if (cloudSnap.registrations && cloudSnap.registrations.length > 0) {
+          setRegistrations(cloudSnap.registrations);
+        }
+        if (cloudSnap.trackingRecords && cloudSnap.trackingRecords.length > 0) {
+          setTrackingRecords(cloudSnap.trackingRecords);
+        }
+        if (cloudSnap.surveys && cloudSnap.surveys.length > 0) {
+          setSurveys(cloudSnap.surveys);
+        }
+        if (cloudSnap.bills && cloudSnap.bills.length > 0) {
+          setBills(cloudSnap.bills);
+        }
+      }
+
+      // 2. Also try Supabase if configured
       const [remoteRegs, remoteTrackings, remoteSurveys] = await Promise.all([
         fetchRegistrationsFromDb(),
         fetchTrackingRecordsFromDb(),
@@ -147,12 +179,23 @@ export default function App() {
         setSurveys(remoteSurveys);
       }
     } catch (err) {
-      console.warn('Supabase fetch skipped/failed:', err);
+      console.warn('Initial data fetch skipped/failed:', err);
     }
   }, []);
 
   useEffect(() => {
     loadFromSupabase();
+
+    // Listen to background cross-device sync updates
+    const unsub = cloudSyncService.addListener(() => {
+      const snap = cloudSyncService.getLocalSnapshot();
+      if (snap.registrations) setRegistrations(snap.registrations);
+      if (snap.trackingRecords) setTrackingRecords(snap.trackingRecords);
+      if (snap.surveys) setSurveys(snap.surveys);
+      if (snap.bills) setBills(snap.bills);
+    });
+
+    return () => unsub();
   }, [loadFromSupabase]);
 
   // Sync with local storage
@@ -180,9 +223,29 @@ export default function App() {
     }
   }, [surveys]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('aetra_customer_bills', JSON.stringify(bills));
+    } catch (e) {
+      console.warn('Storage error', e);
+    }
+  }, [bills]);
+
+  // Handler when admin updates customer bills (manual or excel import)
+  const handleUpdateBills = (newBills: MonthlyBillRecord[]) => {
+    setBills(newBills);
+    try {
+      localStorage.setItem('aetra_customer_bills', JSON.stringify(newBills));
+    } catch (e) {
+      console.warn('Storage error', e);
+    }
+    cloudSyncService.saveBills(newBills);
+  };
+
   // Handler when user registers a new customer
   const handleRegisterSuccess = (newRecord: RegistrationFormData) => {
     setRegistrations((prev) => [newRecord, ...prev]);
+    cloudSyncService.saveRegistration(newRecord);
 
     const todayStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
     const nowTimeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
@@ -440,6 +503,7 @@ export default function App() {
       const updatedRec = updatedList.find((r) => r.noForm === noForm);
       if (updatedRec) {
         saveTrackingRecordToDb(updatedRec).catch((e) => console.warn('Supabase step update error:', e));
+        cloudSyncService.saveTracking(updatedRec);
       }
       return updatedList;
     });
@@ -507,6 +571,7 @@ export default function App() {
       const updatedRec = updatedList.find((r) => r.noForm === noForm);
       if (updatedRec) {
         saveTrackingRecordToDb(updatedRec).catch((e) => console.warn('Supabase tech update error:', e));
+        cloudSyncService.saveTracking(updatedRec);
       }
       return updatedList;
     });
@@ -514,7 +579,7 @@ export default function App() {
     setRegistrations((prev) =>
       prev.map((reg) => {
         if (reg.noForm !== noForm) return reg;
-        return {
+        const updatedReg = {
           ...reg,
           dataPasang: {
             ...reg.dataPasang,
@@ -522,6 +587,8 @@ export default function App() {
             noSegel: data.nomorSegel || reg.dataPasang?.noSegel || '',
           },
         };
+        cloudSyncService.saveRegistration(updatedReg);
+        return updatedReg;
       })
     );
   };
@@ -530,6 +597,7 @@ export default function App() {
     setRegistrations((prev) => prev.filter((r) => r.noForm !== noForm));
     setTrackingRecords((prev) => prev.filter((t) => t.noForm !== noForm));
     deleteRegistrationFromDb(noForm).catch((e) => console.warn('Supabase delete error:', e));
+    cloudSyncService.deleteRegistration(noForm);
     if (activeTrackingForm === noForm) {
       setActiveTrackingForm('');
     }
@@ -714,6 +782,7 @@ export default function App() {
   const handleAddSurvey = (newSurvey: SurveySubmission) => {
     setSurveys((prev) => [newSurvey, ...prev]);
     saveSurveyToDb(newSurvey).catch((e) => console.warn('Supabase survey save error:', e));
+    cloudSyncService.saveSurvey(newSurvey);
   };
 
   const handleLoginSuccess = (user: UserAccount) => {
@@ -743,6 +812,8 @@ export default function App() {
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        adminSubTab={adminSubTab}
+        onSelectAdminSubTab={setAdminSubTab}
         registeredCount={registrations.length}
         isOpenMobile={isOpenMobile}
         setIsOpenMobile={setIsOpenMobile}
@@ -789,14 +860,18 @@ export default function App() {
                 {currentUser?.nama?.slice(0, 2).toUpperCase() || 'PL'}
               </div>
               <div className="min-w-0">
-                <span className="text-[10px] text-blue-200 block leading-tight">Halo, Pelanggan Aetra</span>
+                <span className="text-[10px] text-blue-200 block leading-tight">
+                  {currentUser?.role === 'admin' ? 'Backoffice & Administrator' : 'Halo, Pelanggan Aetra'}
+                </span>
                 <span className="text-xs font-bold truncate block">{currentUser?.nama}</span>
               </div>
             </div>
             <div className="text-right shrink-0">
-              <span className="text-[9px] uppercase tracking-wider text-blue-200 font-semibold block">ID Pelanggan</span>
+              <span className="text-[9px] uppercase tracking-wider text-blue-200 font-semibold block">
+                {currentUser?.role === 'admin' ? 'Otoritas' : 'ID Pelanggan'}
+              </span>
               <span className="text-xs font-mono font-black text-amber-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/15 block">
-                #{currentUser?.idPelanggan || '10842918'}
+                {currentUser?.role === 'admin' ? 'ADMIN' : `#${currentUser?.idPelanggan || '10842918'}`}
               </span>
             </div>
           </div>
@@ -809,6 +884,10 @@ export default function App() {
               registrations={registrations}
               trackingRecords={trackingRecords}
               surveys={surveys}
+              bills={bills}
+              onUpdateBills={handleUpdateBills}
+              activeSubTab={adminSubTab}
+              onChangeSubTab={setAdminSubTab}
               onUpdateTrackingStep={handleUpdateTrackingStep}
               onUpdateTechnicalData={handleUpdateTechnicalData}
               onDeleteRegistration={handleDeleteRegistration}
@@ -869,6 +948,7 @@ export default function App() {
             <MonthlyBillSection
               currentUser={currentUser}
               registrations={registrations}
+              externalBills={bills}
               onNavigateToRegister={() => setActiveTab('registration')}
             />
           )}
@@ -891,6 +971,8 @@ export default function App() {
           setActiveTab={setActiveTab}
           userRole={userRole}
           registeredCount={registrations.length}
+          adminSubTab={adminSubTab}
+          onSelectAdminSubTab={setAdminSubTab}
         />
 
         {/* Footer */}

@@ -6,6 +6,7 @@ import {
   fetchUserAccountsFromDb, 
   saveUserAccountToDb 
 } from '../services/supabaseService';
+import { cloudSyncService } from '../services/cloudSyncService';
 import { 
   Lock, 
   Mail, 
@@ -44,23 +45,37 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Sync users from Supabase on mount
+  // Sync users from Cloud & Supabase on mount
   useEffect(() => {
     const syncUsers = async () => {
       try {
+        await cloudSyncService.pullFromCloud();
+        const snap = cloudSyncService.getLocalSnapshot();
+        const currentLocal = getStoredAccounts();
+        const merged = [...currentLocal];
+
+        if (snap.accounts) {
+          snap.accounts.forEach((sa) => {
+            const idx = merged.findIndex((lu) => lu.email.toLowerCase() === sa.email.toLowerCase() || lu.idPelanggan === sa.idPelanggan);
+            if (idx >= 0) {
+              merged[idx] = { ...merged[idx], ...sa };
+            } else {
+              merged.push(sa);
+            }
+          });
+        }
+
         const remoteUsers = await fetchUserAccountsFromDb();
         if (remoteUsers && remoteUsers.length > 0) {
-          const currentLocal = getStoredAccounts();
-          const merged = [...currentLocal];
           remoteUsers.forEach((ru) => {
             if (!merged.some((lu) => lu.email.toLowerCase() === ru.email.toLowerCase())) {
               merged.push(ru);
             }
           });
-          localStorage.setItem('aetra_accounts', JSON.stringify(merged));
         }
+        localStorage.setItem('aetra_accounts', JSON.stringify(merged));
       } catch (e) {
-        console.warn('Sync users from Supabase error:', e);
+        console.warn('Sync users error:', e);
       }
     };
     syncUsers();
@@ -195,6 +210,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
     accounts.push(newAccount);
     localStorage.setItem('aetra_accounts', JSON.stringify(accounts));
+    await cloudSyncService.saveAccount(newAccount);
 
     // Bersihkan draf sebelumnya agar akun baru mulai dengan formulir kosong
     try {
