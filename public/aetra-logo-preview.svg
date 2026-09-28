@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 300" width="100%" height="100%">
+  <!-- Aetra Corporate Logo (Authentic Mark) -->
+  <g id="aetra-logo">
+    <!-- Emblem Group (Top Right) -->
+    <g transform="translate(230, 15) scale(1.55)">
+      <!-- Top Flame / Water Droplet with White Negative Space Cutout -->
+      <path d="M50 4C50 4 58.5 13 58.5 21C58.5 26.2 54.7 30 50 30C45.3 30 41.5 26.2 41.5 21C41.5 13 50 4 50 4Z" fill="#005DAA"/>
+      <path d="M50 9.5C50.5 12.5 54 16.8 54 20.8C54 23.5 52.2 25.8 50 25.8C47.8 25.8 46 23.8 46 21.2C46 18.8 48.2 15 49 12.8C49.3 11.8 49.7 10.6 50 9.5Z" fill="#FFFFFF"/>
+
+      <!-- Blue Figure Head (Oval Droplet) -->
+      <ellipse cx="50" cy="39" rx="4.8" ry="5.6" fill="#005DAA"/>
+
+      <!-- Blue Figure Torso & Upraised Arms -->
+      <path d="M50 51.5C46.5 51.5 42 48 37 43.5C31.5 38.5 24.5 29.8 19 23.5C17.2 21.5 19.5 19 22 20.8C28 25.5 36.5 34 42.5 39C46 41.8 48 43 50 43C52 43 54 41.8 57.5 39C63.5 34 72 25.5 78 20.8C80.5 19 82.8 21.5 81 23.5C75.5 29.8 68.5 38.5 63 43.5C58 48 53.5 51.5 50 51.5Z" fill="#005DAA"/>
+      <!-- Blue Figure Central Column / Stem -->
+      <path d="M46.8 47.5C46.8 47.5 46.5 65 47 75C47.3 81 48.5 88 50 91.5C51.5 88 52.7 81 53 75C53.5 65 53.2 47.5 53.2 47.5Z" fill="#005DAA"/>
+
+      <!-- Left Orange Cupped Hand -->
+      <path d="M50 93.5C48 89 42 78 35 69C28.5 60.5 20.5 49.5 14 36.5C12.8 34.2 10.5 32 8.5 33.2C6.8 34.2 6.5 36.8 7.2 39C9 45 13 54.5 18 63C24 73 32 82.5 40 88.5C43.5 91 47 92.5 50 93.5Z" fill="#FF5E00"/>
+      <path d="M14 36.5C16.5 41.5 21 49 26.5 49C30 49 33 46 34.5 43C35.2 41.5 34.8 39.5 33 39C30 38 26.5 41 23 41C19.5 41 16 38 14 36.5Z" fill="#FF5E00"/>
+
+      <!-- Right Orange Cupped Hand -->
+      <path d="M50 93.5C52 89 58 78 65 69C71.5 60.5 79.5 49.5 86 36.5C87.2 34.2 89.5 32 91.5 33.2C93.2 34.2 93.5 36.8 92.8 39C91 45 87 54.5 82 63C76 73 68 82.5 60 88.5C56.5 91 53 92.5 50 93.5Z" fill="#FF5E00"/>
+      <path d="M86 36.5C83.5 41.5 79 49 73.5 49C70 49 67 46 65.5 43C64.8 41.5 65.2 39.5 67 39C70 38 73.5 41 77 41C80.5 41 84 38 86 36.5Z" fill="#FF5E00"/>
+    </g>
+
+    <!-- Typography: aetra -->
+    <text x="35" y="205" fill="#005DAA" font-size="118" font-weight="900" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" letter-spacing="-0.04em">aetra</text>
+
+    <!-- Typography: tangerang -->
+    <text x="75" y="260" fill="#005DAA" font-size="44" font-weight="600" font-family="system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" letter-spacing="0.08em">tangerang</text>
+  </g>
+</svg>
