@@ -1,6 +1,0 @@
-{
-  "name": "Portal Layanan Aetra Air Tangerang",
-  "description": "Dashboard layanan pelanggan Aetra Air Tangerang: Pendaftaran Sambungan Baru, Live Tracking Status Pemasangan, Survey Kepuasan Pelanggan, dan FAQ PDAM.",
-  "requestFramePermissions": ["camera"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
