@@ -3,7 +3,8 @@ import { TabType, RegistrationFormData, CustomerTrackingRecord, SurveySubmission
 import { 
   INITIAL_TRACKING_DATABASE, 
   INITIAL_FAQS, 
-  INITIAL_SURVEY_RESPONSES 
+  INITIAL_SURVEY_RESPONSES,
+  INITIAL_REGISTRATIONS
 } from './data/mockData';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -46,43 +47,66 @@ export default function App() {
   const [activeTrackingForm, setActiveTrackingForm] = useState<string>('');
   const [isOpenMobile, setIsOpenMobile] = useState<boolean>(false);
 
-  // Registrations state - starts completely empty
+  // Registrations state - seeded with customer data (Yovi, Amara, Nabila)
   const [registrations, setRegistrations] = useState<RegistrationFormData[]>(() => {
     try {
       const saved = localStorage.getItem('aetra_registrations');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          // Remove any old cached dummy records
-          return parsed.filter(
-            (r: any) =>
-              !r.namaKtp?.toLowerCase().includes('ansori') &&
-              !r.namaKtp?.toLowerCase().includes('aan') &&
-              r.noSr !== '163784'
-          );
+      let parsed: RegistrationFormData[] = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(parsed)) parsed = [];
+
+      // Clean old unwanted test names
+      parsed = parsed.filter(
+        (r) =>
+          !r.namaKtp?.toLowerCase().includes('ansori') &&
+          !r.namaKtp?.toLowerCase().includes('aan') &&
+          r.noSr !== '163784'
+      );
+
+      // Ensure the requested 3 customers exist with latest phone numbers
+      INITIAL_REGISTRATIONS.forEach((seed) => {
+        const existingIdx = parsed.findIndex(
+          (p) => p.noForm === seed.noForm || p.namaKtp?.toLowerCase() === seed.namaKtp?.toLowerCase()
+        );
+        if (existingIdx >= 0) {
+          parsed[existingIdx] = {
+            ...parsed[existingIdx],
+            namaKtp: seed.namaKtp,
+            telpHp: seed.telpHp,
+          };
+        } else {
+          parsed.push(seed);
         }
-      }
-      return [];
+      });
+
+      return parsed;
     } catch {
-      return [];
+      return INITIAL_REGISTRATIONS;
     }
   });
 
-  // Tracking records state - strictly populated from registrations, purges mock people
+  // Tracking records state - synchronized with customer data
   const [trackingRecords, setTrackingRecords] = useState<CustomerTrackingRecord[]>(() => {
     try {
       const saved = localStorage.getItem('aetra_tracking');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          // Purge mock dummy people (Rahmat Hidayat, Budi Hartanto, Siti Rahmawati)
-          const mockIds = ['567890', '567891', '567892'];
-          return parsed.filter((r: CustomerTrackingRecord) => !mockIds.includes(r.noForm));
+      let parsed: CustomerTrackingRecord[] = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(parsed)) parsed = [];
+
+      INITIAL_TRACKING_DATABASE.forEach((seed) => {
+        const existingIdx = parsed.findIndex((p) => p.noForm === seed.noForm);
+        if (existingIdx >= 0) {
+          parsed[existingIdx] = {
+            ...parsed[existingIdx],
+            nama: seed.nama,
+            telp: seed.telp,
+          };
+        } else {
+          parsed.push(seed);
         }
-      }
-      return [];
+      });
+
+      return parsed;
     } catch {
-      return [];
+      return INITIAL_TRACKING_DATABASE;
     }
   });
 
@@ -100,6 +124,7 @@ export default function App() {
   const [receiptData, setReceiptData] = useState<RegistrationFormData | null>(null);
   // Supabase Guide & Database Modal
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+  const [dbVersion, setDbVersion] = useState(0);
 
   // Initial load from Supabase if configured and online
   const loadFromSupabase = useCallback(async () => {
@@ -292,7 +317,24 @@ export default function App() {
     });
 
     setActiveTrackingForm(newRecord.noForm);
-    setReceiptData(newRecord);
+    // Tidak langsung membuka ReceiptModal agar layar status "Pelanggan Sudah Melakukan Pendaftaran" langsung terlihat jelas oleh pelanggan.
+    // Pelanggan dapat membuka tanda terima kapan saja melalui tombol "Lihat Bukti Tanda Terima / SPK" pada kartu status.
+
+    // Save directly to localStorage immediately
+    try {
+      const saved = localStorage.getItem('aetra_registrations');
+      const currentList: RegistrationFormData[] = saved ? JSON.parse(saved) : [];
+      const updatedList = [newRecord, ...currentList.filter((r) => r.noForm !== newRecord.noForm)];
+      localStorage.setItem('aetra_registrations', JSON.stringify(updatedList));
+
+      if (currentUser && !currentUser.idPelanggan) {
+        const updatedUser = { ...currentUser, idPelanggan: newRecord.idPelanggan };
+        setCurrentUser(updatedUser);
+        localStorage.setItem('aetra_current_user', JSON.stringify(updatedUser));
+      }
+    } catch (err) {
+      console.warn('Direct storage sync warning:', err);
+    }
 
     // Persist to online Supabase database asynchronously
     saveRegistrationToDb(newRecord).catch((e) => console.warn('Supabase save error:', e));
@@ -486,6 +528,98 @@ export default function App() {
     }
   };
 
+  const handleImportRegistrations = (newRecords: RegistrationFormData[]) => {
+    setRegistrations((prev) => {
+      const existingForms = new Set(prev.map((r) => r.noForm));
+      const filtered = newRecords.filter((r) => !existingForms.has(r.noForm));
+      return [...filtered, ...prev];
+    });
+
+    const todayStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    setTrackingRecords((prev) => {
+      const existingTrackingForms = new Set(prev.map((t) => t.noForm));
+      const newTrackings: CustomerTrackingRecord[] = newRecords
+        .filter((r) => !existingTrackingForms.has(r.noForm))
+        .map((r) => {
+          const step = (r.trackingStep as 1 | 2 | 3 | 4) || 1;
+          const isPaid = step >= 2;
+          return {
+            noForm: r.noForm,
+            noSr: r.noSr,
+            idPelanggan: r.idPelanggan || ('10' + r.noForm.replace(/\D/g, '').padEnd(6, '0')),
+            email: r.email,
+            nama: r.namaKtp,
+            telp: r.telpHp,
+            alamat: `${r.alamatPasang}, RT/RW ${r.rtRwPasang}, Kel. ${r.kelurahanPasang || r.desaPasang || '-'}`,
+            currentStep: step,
+            tanggalDaftar: r.tanggal || todayStr,
+            estimasiSelesai: '14 Hari Kerja',
+            golonganTarif: r.golonganTarif || '2A1 - Rumah Tangga Standard',
+            biayaSambungan: r.biayaSambungan || 1371545,
+            statusPembayaran: isPaid ? 'Lunas' : 'Menunggu Pembayaran',
+            nomorMeter: r.dataPasang?.noSeriMeter,
+            nomorSegel: r.dataPasang?.noSegel,
+            petugasSurveyor: {
+              nama: 'Bpk. Hendra Gunawan',
+              id: 'SRV-AET-042',
+              telp: '0812-8899-1122',
+              role: 'Surveyor Wilayah',
+            },
+            petugasTeknisi: {
+              nama: r.dataPasang?.namaTeknisi || 'Bpk. Agus Santoso',
+              id: 'TKN-AET-018',
+              telp: '0877-8822-4645',
+              role: 'Teknisi Pipa Dinas & Meter',
+            },
+            steps: [
+              {
+                step: 1,
+                title: 'Pendaftaran Diterima',
+                statusLabel: 'Selesai',
+                updatedAt: r.tanggal || todayStr,
+                isCompleted: true,
+                isCurrent: step === 1,
+                notes: 'Formulir pendaftaran berhasil diimpor ke sistem.',
+              },
+              {
+                step: 2,
+                title: 'Pembayaran Diterima',
+                statusLabel: isPaid ? 'Lunas' : 'Menunggu Pembayaran',
+                updatedAt: isPaid ? todayStr : '-',
+                isCompleted: isPaid,
+                isCurrent: step === 2,
+                notes: isPaid ? 'Pembayaran terverifikasi lunas.' : 'Menunggu pembayaran di loket resmi.',
+              },
+              {
+                step: 3,
+                title: 'Proses Pemasangan',
+                statusLabel: step >= 3 ? 'Sedang Dipasang' : 'Menunggu',
+                updatedAt: step >= 3 ? todayStr : '-',
+                isCompleted: step >= 3,
+                isCurrent: step === 3,
+                notes: 'Pemasangan fisik pipa dinas dan water meter.',
+              },
+              {
+                step: 4,
+                title: 'Selesai / Air Mengalir',
+                statusLabel: step === 4 ? 'Aktif' : 'Belum Aktif',
+                updatedAt: step === 4 ? todayStr : '-',
+                isCompleted: step === 4,
+                isCurrent: step === 4,
+                notes: 'Air bersih mengalir dan siap digunakan.',
+              },
+            ],
+            timelineEvents: [],
+          };
+        });
+      return [...newTrackings, ...prev];
+    });
+
+    newRecords.forEach((reg) => {
+      saveRegistrationToDb(reg).catch((e) => console.warn('Supabase sync error:', e));
+    });
+  };
+
   const handleNavigateToTracking = (noForm: string) => {
     setActiveTrackingForm(noForm);
     setActiveTab('tracking');
@@ -654,10 +788,12 @@ export default function App() {
               onNavigateToTracking={handleNavigateToTracking}
               onNavigateToRegister={() => setActiveTab('registration')}
               onViewReceipt={(record) => setReceiptData(record)}
+              onImportRegistrations={handleImportRegistrations}
               onSwitchToCustomer={() => {
                 setUserRole('customer');
-                setActiveTab('tracking');
+                setActiveTab('registration');
               }}
+              onOpenSupabaseModal={() => setIsSupabaseModalOpen(true)}
             />
           )}
 
@@ -666,6 +802,8 @@ export default function App() {
               onRegisterSuccess={handleRegisterSuccess}
               onNavigateTracking={handleNavigateToTracking}
               currentUser={currentUser}
+              existingRegistrations={registrations}
+              onViewReceipt={(record) => setReceiptData(record)}
             />
           )}
 
@@ -764,9 +902,13 @@ export default function App() {
 
       {/* Supabase Database & Vercel Guide Modal */}
       <SupabaseModal
+        key={dbVersion}
         isOpen={isSupabaseModalOpen}
         onClose={() => setIsSupabaseModalOpen(false)}
-        onCredentialsUpdated={loadFromSupabase}
+        onCredentialsUpdated={() => {
+          setDbVersion((v) => v + 1);
+          loadFromSupabase();
+        }}
       />
     </div>
   );
