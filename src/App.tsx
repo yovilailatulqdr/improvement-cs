@@ -17,6 +17,8 @@ import { AdminSection } from './components/AdminSection';
 import { ReceiptModal } from './components/ReceiptModal';
 import { AuthScreen } from './components/AuthScreen';
 import { SupabaseModal } from './components/SupabaseModal';
+import { MonthlyBillSection } from './components/MonthlyBillSection';
+import { MobileBottomNav } from './components/MobileBottomNav';
 import {
   fetchRegistrationsFromDb,
   saveRegistrationToDb,
@@ -201,17 +203,22 @@ export default function App() {
       biayaSambungan: newRecord.biayaSambungan || 1371545,
       statusPembayaran: 'Menunggu Pembayaran',
       petugasSurveyor: {
-        nama: 'Bpk. Hendra Gunawan',
-        id: 'SRV-AET-042',
-        telp: '0812-8899-1122',
+        nama: newRecord.dataPasang?.namaSales?.trim() || 'Bpk. Hendra Gunawan',
+        id: newRecord.dataPasang?.noWorkOrder?.trim() ? `SRV-${newRecord.dataPasang.noWorkOrder.trim()}` : 'SRV-AET-042',
+        telp: newRecord.dataPasang?.telpPetugas?.trim() || '0812-8899-1122',
         role: 'Surveyor Wilayah & Pemetaan Jaringan',
       },
       petugasTeknisi: {
-        nama: 'Bpk. Agus Santoso',
+        nama: newRecord.dataPasang?.namaTeknisi?.trim() || newRecord.dataPasang?.namaKontraktor?.trim() || 'Bpk. Agus Santoso',
         id: 'TKN-AET-018',
-        telp: '0877-8822-4645',
+        telp: newRecord.dataPasang?.telpPetugas?.trim() || '0877-8822-4645',
         role: 'Teknisi Pipa Dinas & Water Meter',
       },
+      nomorMeter: newRecord.dataPasang?.noSeriMeter?.trim() || 'AET-2609-8472',
+      nomorSegel: newRecord.dataPasang?.noSegel?.trim() || 'SGL-AAT-88192',
+      panjangPipaDinas: newRecord.dataPasang?.panjangPipa?.trim()
+        ? `${newRecord.dataPasang.panjangPipa} Meter (${newRecord.dataPasang.panjangPipaTipe || 'Standard'})`
+        : '4.5 Meter (Standar s/d 6m)',
       steps: [
         {
           step: 1,
@@ -299,10 +306,10 @@ export default function App() {
           time: 'Dalam Antrean',
           date: 'Tahap Berikutnya',
           title: 'Survei Teknis Lapangan & Pengukuran Pipa',
-          description: 'Petugas Surveyor (Bpk. Hendra Gunawan) akan melakukan pengecekan jalur pipa dinas ke lokasi pemasangan.',
+          description: `Petugas Surveyor (${newRecord.dataPasang?.namaSales?.trim() || 'Bpk. Hendra Gunawan'}) akan melakukan pengecekan jalur pipa dinas ke lokasi pemasangan.`,
           status: 'in_progress',
           step: 1,
-          actor: 'Surveyor Wilayah',
+          actor: `Surveyor Wilayah (${newRecord.dataPasang?.namaSales?.trim() || 'Bpk. Hendra Gunawan'})`,
           badge: 'Sedang Berjalan',
         },
       ],
@@ -774,8 +781,29 @@ export default function App() {
           }}
         />
 
+        {/* Dedicated Mobile App Bar Header (Only visible on mobile screens) */}
+        <div className="lg:hidden px-3 pt-3 pb-1">
+          <div className="bg-linear-to-r from-[#005DAA] via-[#004B8A] to-[#003868] text-white p-3.5 rounded-2xl shadow-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white font-bold text-sm shrink-0 border border-white/20 shadow-2xs">
+                {currentUser?.nama?.slice(0, 2).toUpperCase() || 'PL'}
+              </div>
+              <div className="min-w-0">
+                <span className="text-[10px] text-blue-200 block leading-tight">Halo, Pelanggan Aetra</span>
+                <span className="text-xs font-bold truncate block">{currentUser?.nama}</span>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-[9px] uppercase tracking-wider text-blue-200 font-semibold block">ID Pelanggan</span>
+              <span className="text-xs font-mono font-black text-amber-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/15 block">
+                #{currentUser?.idPelanggan || '10842918'}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Main Content Modules */}
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 pb-28 lg:pb-8">
           {activeTab === 'admin' && (
             <AdminSection
               registrations={registrations}
@@ -820,6 +848,7 @@ export default function App() {
             return (
               <TrackingSection
                 trackingRecords={customerFilteredRecords}
+                registrations={registrations}
                 activeFormNumber={activeTrackingForm}
                 onSelectCustomer={(noForm) => setActiveTrackingForm(noForm)}
                 onUpdateTrackingStep={handleUpdateTrackingStep}
@@ -836,6 +865,14 @@ export default function App() {
             );
           })()}
 
+          {activeTab === 'billing' && (
+            <MonthlyBillSection
+              currentUser={currentUser}
+              registrations={registrations}
+              onNavigateToRegister={() => setActiveTab('registration')}
+            />
+          )}
+
           {activeTab === 'survey' && (
             <SurveySection
               submissions={surveys}
@@ -847,6 +884,14 @@ export default function App() {
             <FaqSection faqItems={INITIAL_FAQS} />
           )}
         </main>
+
+        {/* Dedicated Mobile Bottom Navigation Bar */}
+        <MobileBottomNav
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          userRole={userRole}
+          registeredCount={registrations.length}
+        />
 
         {/* Footer */}
         <footer className="bg-white border-t border-slate-200 mt-12 py-8 text-slate-600 text-xs">

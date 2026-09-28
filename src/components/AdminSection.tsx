@@ -586,27 +586,6 @@ export const AdminSection: React.FC<AdminSectionProps> = ({
                 <span className="hidden sm:inline">Tambah Baru</span>
               </button>
             )}
-
-            {onOpenSupabaseModal && (
-              <button
-                type="button"
-                onClick={onOpenSupabaseModal}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition shadow-2xs cursor-pointer ${
-                  isSupabaseConfigured()
-                    ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-900'
-                    : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
-                }`}
-                title="Buka Pengaturan & Status Database Supabase Cloud"
-              >
-                <Database className={`w-4 h-4 ${isSupabaseConfigured() ? 'text-emerald-600' : 'text-slate-500'}`} />
-                <span className="hidden sm:inline">Database Supabase</span>
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    isSupabaseConfigured() ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-                  }`}
-                />
-              </button>
-            )}
           </div>
         </div>
 

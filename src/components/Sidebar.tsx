@@ -4,6 +4,7 @@ import { AetraLogo } from './AetraLogo';
 import {
   FileText,
   Navigation,
+  CreditCard,
   MessageSquareHeart,
   HelpCircle,
   ChevronRight,
@@ -13,7 +14,6 @@ import {
   LayoutDashboard,
   LogOut,
   Users,
-  Database,
 } from 'lucide-react';
 import { isSupabaseConfigured } from '../lib/supabase';
 
@@ -48,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     sublabel: string;
     icon: any;
     isLiveDot?: boolean;
+    isHighlight?: boolean;
   }
 
   const customerNavItems: NavItem[] = [
@@ -63,6 +64,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       sublabel: 'Lacak Status Pemasangan',
       icon: Navigation,
       isLiveDot: true,
+    },
+    {
+      id: 'billing',
+      label: 'Pembayaran Tagihan',
+      sublabel: 'Cek & Bayar Tagihan Air',
+      icon: CreditCard,
+      isHighlight: true,
     },
     {
       id: 'survey',
@@ -84,6 +92,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Data Pelanggan',
       sublabel: 'Pendaftaran Sambungan Baru',
       icon: Users,
+    },
+    {
+      id: 'billing',
+      label: 'Pembayaran Tagihan',
+      sublabel: 'Inquiry Rekening Pelanggan',
+      icon: CreditCard,
     },
   ];
 
@@ -260,36 +274,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
-        {/* Supabase Cloud Connection Status */}
-        {onOpenSupabaseModal && (
-          <div className="px-3 pb-2">
-            <button
-              type="button"
-              onClick={onOpenSupabaseModal}
-              className={`w-full py-2 px-3 rounded-xl border flex items-center justify-between text-xs font-semibold transition cursor-pointer ${
-                isSupabaseConfigured()
-                  ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900 hover:bg-emerald-100/80'
-                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              <div className="flex items-center gap-2 text-left">
-                <Database className={`w-4 h-4 shrink-0 ${isSupabaseConfigured() ? 'text-emerald-600' : 'text-slate-400'}`} />
-                <div>
-                  <div className="leading-tight font-bold text-[11px]">Database Supabase</div>
-                  <div className="text-[10px] text-slate-500 font-normal">
-                    {isSupabaseConfigured() ? 'Cloud Terhubung' : 'Konfigurasi DB'}
-                  </div>
-                </div>
-              </div>
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isSupabaseConfigured() ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'
-                }`}
-                title={isSupabaseConfigured() ? 'Terhubung' : 'Offline / Cache'}
-              />
-            </button>
-          </div>
-        )}
 
         {/* Bottom Status / Copyright */}
         <div className="p-4 border-t border-slate-100 bg-slate-50/50 text-center">

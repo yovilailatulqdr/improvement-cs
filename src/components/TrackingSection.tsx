@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CustomerTrackingRecord } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { CustomerTrackingRecord, RegistrationFormData } from '../types';
 import { 
   Check, 
   Clock, 
@@ -20,6 +20,7 @@ import {
 
 interface TrackingSectionProps {
   trackingRecords: CustomerTrackingRecord[];
+  registrations?: RegistrationFormData[];
   activeFormNumber?: string;
   onSelectCustomer?: (noForm: string) => void;
   onUpdateTrackingStep?: (noForm: string, nextStep: 1 | 2 | 3 | 4) => void;
@@ -30,6 +31,7 @@ interface TrackingSectionProps {
 
 export const TrackingSection: React.FC<TrackingSectionProps> = ({
   trackingRecords,
+  registrations = [],
   activeFormNumber = '',
   onSelectCustomer,
   onUpdateTrackingStep,
@@ -199,6 +201,29 @@ export const TrackingSection: React.FC<TrackingSectionProps> = ({
   const customerDisplayName = selectedRecord.nama.split('/')[0].trim();
   const progressPercent = selectedRecord.currentStep * 25;
 
+  // Match with existing registration data to ensure Petugas Lapangan in Tracking matches the form input
+  const matchingReg = useMemo(() => {
+    if (!selectedRecord) return null;
+    return registrations.find(
+      (r) =>
+        r.noForm === selectedRecord.noForm ||
+        (selectedRecord.idPelanggan && r.idPelanggan === selectedRecord.idPelanggan)
+    );
+  }, [selectedRecord, registrations]);
+
+  // Dynamic Petugas Lapangan derived from registration form or tracking record
+  const surveyorName = matchingReg?.dataPasang?.namaSales?.trim() || selectedRecord.petugasSurveyor?.nama || 'Bpk. Hendra Gunawan';
+  const surveyorId = matchingReg?.dataPasang?.noWorkOrder?.trim() ? `SRV-${matchingReg.dataPasang.noWorkOrder.trim()}` : (selectedRecord.petugasSurveyor?.id || 'SRV-042');
+  const teknisiName = matchingReg?.dataPasang?.namaTeknisi?.trim() || matchingReg?.dataPasang?.namaKontraktor?.trim() || selectedRecord.petugasTeknisi?.nama || 'Bpk. Agus Santoso';
+  const teknisiId = selectedRecord.petugasTeknisi?.id || 'TKN-AET-018';
+  const petugasPhone = matchingReg?.dataPasang?.telpPetugas?.trim() || selectedRecord.petugasTeknisi?.telp || '0877-8822-4645';
+  const cleanPhone = petugasPhone.replace(/\D/g, '').replace(/^0/, '62');
+  const displayMeter = matchingReg?.dataPasang?.noSeriMeter?.trim() || selectedRecord.nomorMeter;
+  const displaySegel = matchingReg?.dataPasang?.noSegel?.trim() || selectedRecord.nomorSegel;
+  const displayPanjangPipa = matchingReg?.dataPasang?.panjangPipa?.trim()
+    ? `${matchingReg.dataPasang.panjangPipa} Meter (${matchingReg.dataPasang.panjangPipaTipe || 'Standard'})`
+    : (selectedRecord.panjangPipaDinas || '4.5 Meter (Standar s/d 6m)');
+
   // Clean, authoritative, non-repetitive milestone history
   const milestones = React.useMemo(() => {
     if (!selectedRecord) return [];
@@ -211,10 +236,10 @@ export const TrackingSection: React.FC<TrackingSectionProps> = ({
         step: 1,
         title: 'Pendaftaran & Verifikasi Berkas',
         subtitle: 'Dokumen KTP, KK, & Data Permohonan',
-        description: `Formulir sambungan baru No. Form #${selectedRecord.noForm} (SR: ${selectedRecord.noSr}) berhasil didaftarkan dan berkas identitas pemohon telah diverifikasi lengkap.`,
+        description: `Formulir sambungan baru No. Form #${selectedRecord.noForm} (SR: ${selectedRecord.noSr}) berhasil didaftarkan dan berkas identitas pemohon telah diverifikasi lengkap. Petugas Surveyor: ${surveyorName}.`,
         date: regDate,
         time: '09:15 WIB',
-        actor: 'Administrasi Pelayanan Aetra',
+        actor: `Surveyor Wilayah (${surveyorName})`,
         isCompleted: selectedRecord.currentStep >= 1,
         isCurrent: selectedRecord.currentStep === 1,
       },
@@ -238,11 +263,11 @@ export const TrackingSection: React.FC<TrackingSectionProps> = ({
         subtitle: 'Pekerjaan Fisik & Instalasi Persil',
         description:
           selectedRecord.currentStep >= 3
-            ? `Pekerjaan penyambungan pipa dinas HDPE dan pemasangan unit water meter (${selectedRecord.nomorMeter || 'AET-2609-8472'}) di persil pelanggan telah selesai dikerjakan.`
-            : `Pekerjaan fisik penyambungan pipa dinas ke persil pelanggan dan pemasangan water meter berstandar SNI oleh teknisi lapangan.`,
+            ? `Pekerjaan penyambungan pipa dinas HDPE dan pemasangan unit water meter (${displayMeter || 'AET-2609-8472'}) di persil pelanggan telah selesai dikerjakan oleh teknisi ${teknisiName}.`
+            : `Pekerjaan fisik penyambungan pipa dinas ke persil pelanggan dan pemasangan water meter berstandar SNI oleh teknisi lapangan ${teknisiName}.`,
         date: selectedRecord.currentStep >= 3 ? regDate : 'Tahap Berikutnya',
         time: selectedRecord.currentStep >= 3 ? '10:00 WIB' : 'Jadwal Pemasangan',
-        actor: selectedRecord.petugasTeknisi?.nama || 'Teknisi Lapangan (Bpk. Agus Santoso)',
+        actor: `Teknisi Lapangan (${teknisiName})`,
         isCompleted: selectedRecord.currentStep >= 3,
         isCurrent: selectedRecord.currentStep === 3,
       },
@@ -569,21 +594,21 @@ export const TrackingSection: React.FC<TrackingSectionProps> = ({
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
                 <span className="text-slate-400 text-[11px] block">Nomor Seri Meter Air</span>
                 <span className="font-mono font-bold text-slate-900 text-xs">
-                  {selectedRecord.nomorMeter || (selectedRecord.currentStep >= 3 ? 'AET-2609-8472' : 'Menunggu Pemasangan Fisik')}
+                  {displayMeter || (selectedRecord.currentStep >= 3 ? 'AET-2609-8472' : 'Menunggu Pemasangan Fisik')}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
                 <span className="text-slate-400 text-[11px] block">Nomor Segel Kran Resmi</span>
                 <span className="font-mono font-bold text-slate-900 text-xs">
-                  {selectedRecord.nomorSegel || (selectedRecord.currentStep >= 4 ? 'SGL-AAT-99120' : 'Menunggu Uji Pengaliran')}
+                  {displaySegel || (selectedRecord.currentStep >= 4 ? 'SGL-AAT-99120' : 'Menunggu Uji Pengaliran')}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
                 <span className="text-slate-400 text-[11px] block">Panjang Pipa Dinas</span>
                 <span className="font-bold text-slate-900 text-xs">
-                  {selectedRecord.panjangPipaDinas || '4.5 Meter (Standar s/d 6m)'}
+                  {displayPanjangPipa}
                 </span>
               </div>
 
@@ -601,23 +626,28 @@ export const TrackingSection: React.FC<TrackingSectionProps> = ({
         <div className="lg:col-span-5 space-y-6">
           {/* Petugas Lapangan Ditugaskan */}
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <UserCheck className="w-4 h-4 text-emerald-600" />
-              <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                Petugas Lapangan Aetra
-              </h4>
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-emerald-600" />
+                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                  Petugas Lapangan Aetra
+                </h4>
+              </div>
+              <span className="text-[10px] text-blue-800 bg-blue-50 px-2 py-0.5 rounded font-semibold border border-blue-200">
+                Sesuai Data Pendaftaran
+              </span>
             </div>
 
             {/* Teknisi Pemasangan */}
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-[#005DAA] text-white font-bold flex items-center justify-center text-sm shadow-xs shrink-0">
-                  TKN
+                  {teknisiName.slice(0, 3).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <h5 className="text-xs font-bold text-slate-900 truncate">
-                      {selectedRecord.petugasTeknisi?.nama || 'Bpk. Agus Santoso'}
+                      {teknisiName}
                     </h5>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
                       Bersertifikat
@@ -627,14 +657,14 @@ export const TrackingSection: React.FC<TrackingSectionProps> = ({
                     {selectedRecord.petugasTeknisi?.role || 'Teknisi Pipa Dinas & Water Meter'}
                   </p>
                   <p className="text-[10px] font-mono text-slate-400">
-                    ID: {selectedRecord.petugasTeknisi?.id || 'TKN-AET-018'}
+                    ID: {teknisiId}
                   </p>
                 </div>
               </div>
 
               <div className="pt-2 border-t border-slate-200/80 flex items-center gap-2">
                 <a
-                  href={`https://wa.me/6287788224645?text=Halo%20Aetra,%20saya%20pemilik%20No.%20Form%20${selectedRecord.noForm}%20ingin%20konfirmasi%20jadwal%20pemasangan.`}
+                  href={`https://wa.me/${cleanPhone}?text=Halo%20${encodeURIComponent(teknisiName)},%20saya%20pemilik%20No.%20Form%20${selectedRecord.noForm}%20ingin%20konfirmasi%20jadwal%20pemasangan%20sambungan%20air.`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-xs transition"
@@ -643,7 +673,7 @@ export const TrackingSection: React.FC<TrackingSectionProps> = ({
                   Chat WhatsApp
                 </a>
                 <a
-                  href="tel:0215985477"
+                  href={`tel:${petugasPhone.replace(/[^\d+]/g, '')}`}
                   className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs transition"
                 >
                   <Phone className="w-3.5 h-3.5" />
@@ -655,13 +685,13 @@ export const TrackingSection: React.FC<TrackingSectionProps> = ({
             {/* Surveyor Wilayah */}
             <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200 text-xs flex items-center justify-between">
               <div>
-                <span className="text-[10px] text-slate-400 block">Surveyor Teknis:</span>
+                <span className="text-[10px] text-slate-400 block">Surveyor Teknis Wilayah:</span>
                 <span className="font-bold text-slate-800">
-                  {selectedRecord.petugasSurveyor?.nama || 'Bpk. Hendra Gunawan'}
+                  {surveyorName}
                 </span>
               </div>
               <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
-                {selectedRecord.petugasSurveyor?.id || 'SRV-042'}
+                {surveyorId}
               </span>
             </div>
           </div>

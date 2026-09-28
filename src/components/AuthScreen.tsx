@@ -17,6 +17,7 @@ import {
   Droplets,
   Sparkles,
   Shield,
+  ShieldCheck,
   Database
 } from 'lucide-react';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -493,15 +494,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
         {/* Footer Security & Info */}
         <div className="bg-slate-100/90 px-6 py-3 border-t border-slate-200/80 flex items-center justify-between text-[10px] text-slate-500">
-          <button
-            type="button"
-            onClick={() => setIsSupabaseModalOpen(true)}
-            className="flex items-center gap-1.5 hover:text-[#005DAA] transition cursor-pointer font-medium"
-            title="Pengaturan Database Supabase"
-          >
-            <Database className={`w-3.5 h-3.5 ${isSupabaseConfigured() ? 'text-emerald-600' : 'text-amber-600'}`} />
-            <span>Database: {isSupabaseConfigured() ? 'Cloud Terhubung 🟢' : 'Setup Supabase ⚙️'}</span>
-          </button>
+          <span className="flex items-center gap-1 text-slate-500 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Koneksi Aman Terenkripsi SSL</span>
+          </span>
           <span>&copy; 2026 PT Aetra Air Tangerang</span>
         </div>
       </div>

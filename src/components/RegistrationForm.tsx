@@ -163,6 +163,8 @@ export const getEmptyFormData = (user?: UserAccount | null): RegistrationFormDat
     tanggalPasangMeter: '',
     noSegel: '',
     noSeriMeter: '',
+    namaTeknisi: '',
+    telpPetugas: '',
   },
   fotoPropertiFiles: [],
   skemaPembayaran: '',
@@ -2451,14 +2453,22 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
               </span>
             </div>
 
-            {/* Sub-Card 1: Data Administrasi & Penugasan Survey */}
+            {/* Sub-Card 1: Data Administrasi & Penugasan Petugas Lapangan */}
             <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 space-y-3">
-              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
-                1. Administrasi &amp; Petugas Survey Lapangan
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                  1. Administrasi &amp; Petugas Lapangan Aetra (Surveyor &amp; Teknisi)
+                </span>
+                <span className="text-[11px] text-blue-800 font-semibold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                  Tersinkronisasi ke Tracking Status
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Nama Sales / Surveyor</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Nama Surveyor Wilayah Aetra
+                  </label>
                   <input
                     type="text"
                     value={formData.dataPasang.namaSales}
@@ -2468,13 +2478,58 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                         dataPasang: { ...formData.dataPasang, namaSales: e.target.value },
                       })
                     }
-                    placeholder="Nama surveyor / sales"
+                    placeholder="Contoh: Bpk. Hendra Gunawan"
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005DAA] focus:outline-hidden"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Petugas survei jalur pipa dinas
+                  </span>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Tanggal Survey</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Nama Teknisi Lapangan / Pemasangan
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.dataPasang.namaTeknisi || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        dataPasang: { ...formData.dataPasang, namaTeknisi: e.target.value },
+                      })
+                    }
+                    placeholder="Contoh: Bpk. Agus Santoso"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005DAA] focus:outline-hidden"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Teknisi instalasi pipa &amp; water meter
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    No. Telepon / WA Petugas Lapangan
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.dataPasang.telpPetugas || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        dataPasang: { ...formData.dataPasang, telpPetugas: e.target.value },
+                      })
+                    }
+                    placeholder="Contoh: 0877-8822-4645"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-[#005DAA] focus:outline-hidden"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Kontak resmi konfirmasi jadwal pasang
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Tanggal Survey Lapangan</label>
                   <input
                     type="date"
                     value={formData.dataPasang.tanggalSurvey}
@@ -2489,7 +2544,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">No. Work Order</label>
+                  <label className="block font-semibold text-slate-700 mb-1">No. Work Order (SPK Lapangan)</label>
                   <input
                     type="text"
                     value={formData.dataPasang.noWorkOrder}
@@ -2499,13 +2554,13 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                         dataPasang: { ...formData.dataPasang, noWorkOrder: e.target.value },
                       })
                     }
-                    placeholder="Nomor Work Order"
+                    placeholder="Contoh: WO-2026-8819"
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-[#005DAA] focus:outline-hidden"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Nama Kontraktor Pelaksana</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Nama Kontraktor / Rekanan</label>
                   <input
                     type="text"
                     value={formData.dataPasang.namaKontraktor}
@@ -2515,7 +2570,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
                         dataPasang: { ...formData.dataPasang, namaKontraktor: e.target.value },
                       })
                     }
-                    placeholder="Nama kontraktor pelaksana"
+                    placeholder="Nama vendor pelaksana"
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005DAA] focus:outline-hidden"
                   />
                 </div>
